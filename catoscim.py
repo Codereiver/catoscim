@@ -16,6 +16,7 @@
 import csv
 import datetime
 import json
+import logging
 import os
 import secrets
 import ssl
@@ -53,8 +54,7 @@ class CatoSCIM:
             The authentication token for SCIM access, as specified in CMA.
             If not provided, will look for CATO_SCIM_TOKEN environment variable.
         log_level
-            Controls the printing of log messages. Messages with a level >= this value
-            will be printed. Set to 0 (default) to print no log.
+            Controls the logging level. 0=no logging, 1=ERROR, 2=INFO, 3=DEBUG.
         call_count
             Running count of API calls made to the Cato SCIM endpoint.
         '''
@@ -70,15 +70,42 @@ class CatoSCIM:
         self.log_level = log_level
         self.call_count = 0
         self.start = datetime.datetime.utcnow()
+        
+        # Set up logger
+        self.logger = logging.getLogger(f'catoscim.{id(self)}')
+        self.logger.handlers.clear()  # Remove any existing handlers
+        
+        if self.log_level > 0:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+            
+            # Map log_level to logging levels
+            level_map = {1: logging.ERROR, 2: logging.INFO, 3: logging.DEBUG}
+            self.logger.setLevel(level_map.get(self.log_level, logging.DEBUG))
+        else:
+            self.logger.setLevel(logging.CRITICAL + 1)  # Disable all logging
 
 
-    def log(self,level,*items):
+    def log(self, level, *items):
         '''
-        Prints a log message, but only if the message level >= CatoSCIM.log_level. By default this
-        is 0 and all log messages have a level > 0, so the default is for no log messages to be printed.
+        Log a message using Python's logging module.
+        
+        level: 1=ERROR, 2=INFO, 3=DEBUG
+        *items: Message items to log
         '''
         if level <= self.log_level:
-            print(f'LOG{level} {datetime.datetime.utcnow()} +{self.elapsed()} {self.call_count}>',*items)
+            message = f'+{self.elapsed()} {self.call_count}> {" ".join(str(item) for item in items)}'
+            
+            if level == 1:
+                self.logger.error(message)
+            elif level == 2:
+                self.logger.info(message)
+            elif level == 3:
+                self.logger.debug(message)
+            else:
+                self.logger.debug(message)
 
 
     def elapsed(self):

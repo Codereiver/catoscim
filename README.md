@@ -217,7 +217,25 @@ python3 examples/create_user.py jane.doe@example.com Jane Doe ext-123 --password
 python3 examples/create_user.py jane.doe@example.com Jane Doe ext-123 --inactive
 ```
 
-### 6. Group Membership Management
+### 6. Update User Password
+```bash
+# Update a user's password
+python3 examples/update_password.py john.doe@example.com "NewSecurePassword123!"
+```
+
+### 7. Enable/Disable User
+```bash
+# Check user status
+python3 examples/user_status.py status john.doe@example.com
+
+# Enable (activate) user
+python3 examples/user_status.py enable john.doe@example.com
+
+# Disable (deactivate) user
+python3 examples/user_status.py disable john.doe@example.com
+```
+
+### 8. Group Membership Management
 ```bash
 # Add user to group
 python3 examples/group_membership.py add "Engineering Team" john.doe@example.com
@@ -326,6 +344,8 @@ catoscim/
 │   ├── find_user.py
 │   ├── find_group.py
 │   ├── create_user.py
+│   ├── update_password.py
+│   ├── user_status.py
 │   └── group_membership.py
 ├── tests/                 # Test suite
 │   ├── test_initialization.py

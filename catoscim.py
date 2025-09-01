@@ -221,7 +221,7 @@ class CatoSCIM:
         return success, result
 
 
-    def create_group(self, displayName, externalId, members=[]):
+    def create_group(self, displayName, externalId, members=None):
         '''
         Creates a new group. Caller must supply the group name and external ID 
         but the member list is optional. If members are to be created, the format must look like this:
@@ -241,6 +241,10 @@ class CatoSCIM:
         '''
 
         logger.info(f'Creating group: {displayName} (externalId: {externalId})')
+
+        # Handle mutable default argument safely
+        if members is None:
+            members = []
 
         #
         # create the data object

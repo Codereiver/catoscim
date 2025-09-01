@@ -1,19 +1,17 @@
 # CatoSCIM SDK
 
-> ⚠️ **DISCLAIMER**: This is an unofficial, community-developed SDK for the Cato Networks SCIM API. This is NOT an official Cato Networks release and is provided with no guarantees of support. For official support, contact Cato Networks directly at api@catonetworks.com.
+> ⚠️ **DISCLAIMER**: This is an unofficial SDK for the Cato Networks SCIM API. This is NOT an official Cato Networks release and is provided with no guarantees of support.
 
 A simple Python SDK for interacting with the Cato Networks SCIM (System for Cross-domain Identity Management) service. This SDK provides a Python library for programmatic access and includes example command-line scripts for common tasks.
 
 ## Features
 
-- **Secure by Default**: SSL/TLS verification enabled by default
 - **Pure Python**: Uses only Python standard library with minimal dependencies
 - **Environment Configuration**: Supports `.env` files and environment variables
 - **SDK Library**: Import and use as a Python library in your applications
 - **Comprehensive API Coverage**: Supports all major SCIM operations for users and groups
 - **Example Scripts**: Ready-to-use command-line examples for common tasks
-- **Professional Logging**: Uses Python's logging module with configurable levels
-- **Security Reviewed**: Comprehensive security review with fixes implemented
+- **Logging**: Uses Python's logging module with configurable levels
 
 ## Installation
 

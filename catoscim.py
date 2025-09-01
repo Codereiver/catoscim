@@ -6,18 +6,7 @@ catoscim.py - Unofficial Cato Networks SCIM SDK
 
 DISCLAIMER: This is an unofficial, community-developed SDK for the Cato Networks SCIM API.
            This is NOT an official Cato Networks release and is provided with no guarantees 
-           of support. For official support, contact Cato Networks directly.
-
-Version: 0.0
-Author: Peter Lee, 2 May 2023
-License: Provided as-is for demonstration purposes
-
-This script is supplied as a demonstration of how to access the Cato SCIM API with Python.
-It is not an official Cato release and is provided with no guarantees of support. Error handling
-is restricted to the bare minimum required for the script to work with the API, and may not be
-sufficient for production environments.
-
-All questions or feedback about the Cato SCIM API should be sent to api@catonetworks.com
+           of support.
 """
 
 import csv

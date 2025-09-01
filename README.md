@@ -1,14 +1,19 @@
 # CatoSCIM SDK
 
+> ⚠️ **DISCLAIMER**: This is an unofficial, community-developed SDK for the Cato Networks SCIM API. This is NOT an official Cato Networks release and is provided with no guarantees of support. For official support, contact Cato Networks directly at api@catonetworks.com.
+
 A simple Python SDK for interacting with the Cato Networks SCIM (System for Cross-domain Identity Management) service. This SDK provides a Python library for programmatic access and includes example command-line scripts for common tasks.
 
 ## Features
 
+- **Secure by Default**: SSL/TLS verification enabled by default
 - **Pure Python**: Uses only Python standard library with minimal dependencies
 - **Environment Configuration**: Supports `.env` files and environment variables
 - **SDK Library**: Import and use as a Python library in your applications
 - **Comprehensive API Coverage**: Supports all major SCIM operations for users and groups
 - **Example Scripts**: Ready-to-use command-line examples for common tasks
+- **Professional Logging**: Uses Python's logging module with configurable levels
+- **Security Reviewed**: Comprehensive security review with fixes implemented
 
 ## Installation
 
@@ -18,6 +23,20 @@ A simple Python SDK for interacting with the Cato Networks SCIM (System for Cros
    pip install -r requirements.txt
    ```
 3. **Configure credentials** (see Configuration section below)
+
+## Quick Start
+
+```python
+from catoscim import CatoSCIM
+
+# Initialize with environment variables (recommended)
+client = CatoSCIM()  # SSL verification enabled by default
+
+# List all users
+success, users = client.get_users()
+if success:
+    print(f"Found {len(users)} users")
+```
 
 ## Configuration
 
@@ -50,7 +69,11 @@ client = CatoSCIM(baseurl="https://your-url", token="your-token")
 from catoscim import CatoSCIM
 
 # Initialize client (uses environment variables or .env file)
+# SSL verification is enabled by default for security
 client = CatoSCIM()
+
+# For development environments with self-signed certificates (NOT for production!)
+# client = CatoSCIM(verify_ssl=False)  # Will show security warning
 
 # Get all users
 success, users = client.get_users()
@@ -228,18 +251,21 @@ Tests require valid SCIM credentials and will fail if credentials are not proper
 
 #### Constructor
 ```python
-CatoSCIM(baseurl=None, token=None, log_level=0)
+CatoSCIM(baseurl=None, token=None, log_level=0, verify_ssl=True)
 ```
 - `baseurl`: SCIM service URL (optional if `CATO_SCIM_URL` is set)
 - `token`: Authentication token (optional if `CATO_SCIM_TOKEN` is set)
 - `log_level`: Logging level (0=none, 1-3=increasing verbosity)
+- `verify_ssl`: SSL certificate verification (default=True, set to False only for development)
 
 #### Properties
 - `baseurl`: The SCIM service URL
 - `token`: The authentication token
-- `log_level`: Current logging level
+- `log_level`: Current logging level (0=none, 1=ERROR, 2=INFO, 3=DEBUG)
+- `verify_ssl`: SSL verification status (True/False)
 - `call_count`: Number of API calls made
 - `start`: Timestamp when client was initialized
+- `logger`: Python logger instance for this client
 
 #### Methods
 
@@ -264,10 +290,11 @@ CatoSCIM(baseurl=None, token=None, log_level=0)
 
 ## Security Notes
 
-- **SSL Verification**: Disabled by default (`ssl._create_unverified_context()`)
+- **SSL Verification**: Enabled by default for security. Can be disabled for development only with `verify_ssl=False`
 - **Credentials**: Store in environment variables or `.env` file, never in code
 - **Passwords**: Auto-generated using `secrets` module for cryptographic strength
 - **Tokens**: Never logged or displayed in error messages
+- **Development Mode**: When `verify_ssl=False`, a security warning is displayed
 
 ## Error Handling
 
@@ -288,18 +315,25 @@ if not success:
         print(f"Error: {result['error']}")
 ```
 
-## Contributing
+## Project Structure
 
-This SDK is provided as a demonstration tool. For production use:
-
-1. Add comprehensive error handling
-2. Implement proper SSL certificate validation
-3. Add input validation and sanitization
-4. Consider adding retry logic for transient failures
-5. Add comprehensive logging
-
-## Support
-
-For questions about the Cato SCIM API, contact: api@catonetworks.com
-
-This SDK is provided as-is with no guarantees of support.
+```
+catoscim/
+├── catoscim.py           # Main SDK implementation
+├── examples/              # Standalone example scripts
+│   ├── list_users.py
+│   ├── list_groups.py
+│   ├── find_user.py
+│   ├── find_group.py
+│   ├── create_user.py
+│   └── group_membership.py
+├── tests/                 # Test suite
+│   ├── test_initialization.py
+│   ├── test_user_operations.py
+│   └── test_group_operations.py
+├── .env.example          # Environment variable template
+├── requirements.txt      # Python dependencies
+├── README.md            # This file
+├── CLAUDE.local.md      # Technical documentation
+└── SECURITY_REVIEW.md   # Security analysis and recommendations
+```

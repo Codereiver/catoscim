@@ -38,10 +38,10 @@ def test_catoscim_initialization_with_environment_credentials():
     assert client.token == expected_token
     
     # Verify default values are set correctly
-    assert client.log_level == 0
+    assert client.verify_ssl == True
     assert client.call_count == 0
     
     print(f"✓ CatoSCIM initialized with URL: {client.baseurl[:30]}...")
     print(f"✓ Token is set (length: {len(client.token)} characters)")
-    print(f"✓ Default log_level: {client.log_level}")
+    print(f"✓ SSL verification enabled: {client.verify_ssl}")
     print(f"✓ Initial call_count: {client.call_count}")

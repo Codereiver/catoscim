@@ -1,17 +1,24 @@
-# catoscim.py
-#
-# Version: 0.0
-# Author: Peter Lee, 2 May 2023
-#
-# Changes since 0.0:
-#   - 
-#
-# This script is supplied as a demonstration of how to access the Cato SCIM API with Python. It
-# is not an official Cato release and is provided with no guarantees of support. Error handling
-# is restricted to the bare minimum required for the script to work with the API, and may not be
-# sufficient for production environments.
-#
-# All questions or feedback should be sent to api@catonetworks.com
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+catoscim.py - Unofficial Cato Networks SCIM SDK
+
+DISCLAIMER: This is an unofficial, community-developed SDK for the Cato Networks SCIM API.
+           This is NOT an official Cato Networks release and is provided with no guarantees 
+           of support. For official support, contact Cato Networks directly.
+
+Version: 0.0
+Author: Peter Lee, 2 May 2023
+License: Provided as-is for demonstration purposes
+
+This script is supplied as a demonstration of how to access the Cato SCIM API with Python.
+It is not an official Cato release and is provided with no guarantees of support. Error handling
+is restricted to the bare minimum required for the script to work with the API, and may not be
+sufficient for production environments.
+
+All questions or feedback about the Cato SCIM API should be sent to api@catonetworks.com
+"""
 
 import csv
 import datetime
@@ -25,6 +32,7 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+import warnings
 from urllib.error import HTTPError, URLError
 
 # Try to import dotenv, but don't fail if it's not available
@@ -34,16 +42,20 @@ try:
 except ImportError:
     pass  # dotenv not installed, will use system environment variables only
 
+# Set up module-level logger
+logger = logging.getLogger(__name__)
+
 
 class CatoSCIM:
-    '''
-    class CatoSCIM
+    """
+    CatoSCIM - Unofficial SDK for Cato Networks SCIM API
+    
+    This is an unofficial, community-developed wrapper for SCIM API calls.
+    Not an official Cato Networks product.
+    """
 
-    Wrapper for SCIM API calls. Initialisation
-    '''
 
-
-    def __init__(self, baseurl=None, token=None, log_level=0):
+    def __init__(self, baseurl=None, token=None, log_level='WARNING', verify_ssl=True):
         '''
         Initialise a Cato SCIM object. Members are:
 
@@ -54,7 +66,11 @@ class CatoSCIM:
             The authentication token for SCIM access, as specified in CMA.
             If not provided, will look for CATO_SCIM_TOKEN environment variable.
         log_level
-            Controls the logging level. 0=no logging, 1=ERROR, 2=INFO, 3=DEBUG.
+            Logging level as string: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
+            or as integer for backwards compatibility.
+        verify_ssl
+            Controls SSL certificate verification. Set to False only for development.
+            Default is True for security.
         call_count
             Running count of API calls made to the Cato SCIM endpoint.
         '''
@@ -67,52 +83,31 @@ class CatoSCIM:
         if not self.token:
             raise ValueError("SCIM token must be provided either as parameter or via CATO_SCIM_TOKEN environment variable")
         
-        self.log_level = log_level
+        self.verify_ssl = verify_ssl
         self.call_count = 0
-        self.start = datetime.datetime.utcnow()
         
-        # Set up logger
-        self.logger = logging.getLogger(f'catoscim.{id(self)}')
-        self.logger.handlers.clear()  # Remove any existing handlers
-        
-        if self.log_level > 0:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-            
-            # Map log_level to logging levels
-            level_map = {1: logging.ERROR, 2: logging.INFO, 3: logging.DEBUG}
-            self.logger.setLevel(level_map.get(self.log_level, logging.DEBUG))
+        # Configure module logger
+        if isinstance(log_level, int):
+            # Backwards compatibility: 0=CRITICAL+1, 1=ERROR, 2=INFO, 3=DEBUG
+            level_map = {0: logging.CRITICAL + 1, 1: logging.ERROR, 2: logging.INFO, 3: logging.DEBUG}
+            logger.setLevel(level_map.get(log_level, logging.DEBUG))
         else:
-            self.logger.setLevel(logging.CRITICAL + 1)  # Disable all logging
-
-
-    def log(self, level, *items):
-        '''
-        Log a message using Python's logging module.
+            logger.setLevel(getattr(logging, log_level.upper(), logging.WARNING))
         
-        level: 1=ERROR, 2=INFO, 3=DEBUG
-        *items: Message items to log
-        '''
-        if level <= self.log_level:
-            message = f'+{self.elapsed()} {self.call_count}> {" ".join(str(item) for item in items)}'
-            
-            if level == 1:
-                self.logger.error(message)
-            elif level == 2:
-                self.logger.info(message)
-            elif level == 3:
-                self.logger.debug(message)
-            else:
-                self.logger.debug(message)
+        # Issue security warning if SSL verification is disabled
+        if not self.verify_ssl:
+            warnings.warn(
+                "SSL certificate verification is disabled. This is INSECURE and should "
+                "only be used in development environments. Never disable SSL verification "
+                "in production!",
+                SecurityWarning,
+                stacklevel=2
+            )
+            logger.warning("SSL certificate verification is disabled - this is insecure!")
+        
+        logger.debug(f"Initialized CatoSCIM with baseurl: {self.baseurl}")
 
 
-    def elapsed(self):
-        '''
-        Returns a datetime.timedelta of the elapsed time from __init__ to now.
-        '''
-        return datetime.datetime.utcnow()-self.start
 
 
     def send(self, method="GET", path="/", request_data=None):
@@ -132,10 +127,10 @@ class CatoSCIM:
         directly by the user, but will be called by other functions which handle pagination and
         return data to the user as a Python object.
         '''
-        self.log(2,f'send {method} {path}')
+        logger.info(f'Sending {method} request to {path}')
         body = None
         if request_data is not None:
-            self.log(3, f'data:\n{request_data}')
+            logger.debug(f'Request data: {request_data}')
             body = json.dumps(request_data).encode('ascii')
 
         #
@@ -157,19 +152,28 @@ class CatoSCIM:
                 data = body
             )
             self.call_count += 1
-            no_verify = ssl._create_unverified_context()
-            response = urllib.request.urlopen(request, context=no_verify)
+            
+            # Handle SSL verification based on configuration
+            if self.verify_ssl:
+                # Use default SSL verification (secure)
+                response = urllib.request.urlopen(request)
+            else:
+                # Disable SSL verification (development only)
+                logger.warning("SSL verification disabled - this is insecure!")
+                context = ssl._create_unverified_context()
+                response = urllib.request.urlopen(request, context=context)
+            
             result_data = response.read()
         except HTTPError as e:
             body = e.read().decode('utf-8', 'replace')
             return False, {"status":e.code, "error":body}
         except URLError as e:
-            self.log(1,f'Error sending request: {e}')
+            logger.error(f'Error sending request: {e}')
             return False, {"reason":e.reason, "error":str(e)}
         except Exception as e:
-            self.log(1,f'Error sending request: {e}')
+            logger.error(f'Error sending request: {e}')
             return False, {"error":str(e)}
-        self.log(3,f'result_data: {result_data}')
+        logger.debug(f'Response data: {result_data}')
         if result_data == b'': # DELETE returns an empty response
             result_data = b'{}'
         return True, json.loads(result_data.decode('utf-8','replace'))
@@ -193,10 +197,7 @@ class CatoSCIM:
         Returns a tuple consisting of a Boolean success flag, and the response.
         '''
 
-        #
-        # log the function call
-        #
-        self.log(1, f'add_members({groupid})')
+        logger.info(f'Adding members to group {groupid}')
 
         #
         # create the data object
@@ -239,10 +240,7 @@ class CatoSCIM:
         Returns a tuple consisting of a Boolean success flag, and the response string.
         '''
 
-        #
-        # log the function call
-        #
-        self.log(1, f'create_group({displayName}, {externalId})')
+        logger.info(f'Creating group: {displayName} (externalId: {externalId})')
 
         #
         # create the data object
@@ -270,10 +268,7 @@ class CatoSCIM:
         Returns a tuple consisting of a Boolean success flag, and the response string.
         '''
 
-        #
-        # log the function call
-        #
-        self.log(1, f'create_user({email})')
+        logger.info(f'Creating user: {email}')
 
         #
         # generate a strong password if none supplied
@@ -321,7 +316,7 @@ class CatoSCIM:
 
         Returns a Boolean success flag and a dictionary with the error or response.
         '''
-        self.log(1,f'disable_group({groupid})')
+        logger.info(f'Disabling group: {groupid}')
         return self.send("DELETE", f'/Groups/{groupid}')
 
 
@@ -331,7 +326,7 @@ class CatoSCIM:
 
         Returns a Boolean success flag and a dictionary with the error or response.
         '''
-        self.log(1,f'disable_user({userid})')
+        logger.info(f'Disabling user: {userid}')
         return self.send("DELETE", f'/Users/{userid}')
 
 
@@ -339,7 +334,7 @@ class CatoSCIM:
         '''
         Returns a Boolean success flag and a list of any matching groups. It should only ever return 0 or 1 groups.
         '''
-        self.log(1,f'find_group({displayName})')
+        logger.info(f'Finding group by name: {displayName}')
         groups = []
         iteration = 0
         while True:
@@ -351,13 +346,10 @@ class CatoSCIM:
             filter_string = urllib.parse.quote(f'displayName eq "{displayName}"')
             success, response = self.send("GET", f'/Groups?filter={filter_string}&startIndex={len(groups)}')
             if not success:
-                self.log(1, f'Error retrieving users: {response}')
+                logger.error(f'Error retrieving groups: {response}')
                 return False, response
 
-            #
-            # log
-            #
-            self.log(1,f'Iteration:{iteration} Current_count:{len(groups)} Received_count:{len(response["Resources"])} totalResults:{response["totalResults"]}')
+            logger.debug(f'Group search iteration {iteration}: current={len(groups)}, received={len(response["Resources"])}, total={response["totalResults"]}')
 
             #
             # add new groups to the list
@@ -383,7 +375,7 @@ class CatoSCIM:
             - givenName
             - familyName
         '''
-        self.log(1,f'find_users({field},{value})')
+        logger.info(f'Finding users by {field}: {value}')
         users = []
         iteration = 0
         while True:
@@ -395,13 +387,10 @@ class CatoSCIM:
             filter_string = urllib.parse.quote(f'{field} eq "{value}"')
             success, response = self.send("GET", f'/Users?filter={filter_string}&startIndex={len(users)}')
             if not success:
-                self.log(1, f'Error retrieving users: {response}')
+                logger.error(f'Error retrieving users: {response}')
                 return False, response
 
-            #
-            # log
-            #
-            self.log(1,f'Iteration:{iteration} Current_count:{len(users)} Received_count:{len(response["Resources"])} totalResults:{response["totalResults"]}')
+            logger.debug(f'User search iteration {iteration}: current={len(users)}, received={len(response["Resources"])}, total={response["totalResults"]}')
 
             #
             # add new users to the list
@@ -424,7 +413,7 @@ class CatoSCIM:
 
         Returns a Boolean success flag and a dictionary with the error or user details.
         '''
-        self.log(1,f'get_group({groupid})')
+        logger.info(f'Getting group: {groupid}')
         return self.send("GET", f'/Groups/{groupid}')
 
 
@@ -433,7 +422,7 @@ class CatoSCIM:
         Returns a Boolean success flag and a list of all groups as JSON objects. Keeps iterating until all groups are
         retrieved.
         '''
-        self.log(1,"get_groups()")
+        logger.info('Fetching all groups')
         groups = []
         iteration = 0
         while True:
@@ -444,13 +433,10 @@ class CatoSCIM:
             iteration += 1
             success, response = self.send("GET", f'/Groups?startIndex={len(groups)}')
             if not success:
-                self.log(1, f'Error retrieving groups: {response}')
+                logger.error(f'Error retrieving groups: {response}')
                 return False, response
 
-            #
-            # log
-            #
-            self.log(1,f'Iteration:{iteration} Current_count:{len(groups)} Received_count:{len(response["Resources"])} totalResults:{response["totalResults"]}')
+            logger.debug(f'Groups fetch iteration {iteration}: current={len(groups)}, received={len(response["Resources"])}, total={response["totalResults"]}')
 
             #
             # add new groups to the list
@@ -473,7 +459,7 @@ class CatoSCIM:
 
         Returns a Boolean success flag and a dictionary with the error or user details.
         '''
-        self.log(1,f'get_user({userid})')
+        logger.info(f'Getting user: {userid}')
         return self.send("GET", f'/Users/{userid}')
 
 
@@ -482,7 +468,7 @@ class CatoSCIM:
         Returns a Boolean success flag and a list of all users as JSON objects. Keeps iterating until all users are
         retrieved.
         '''
-        self.log(1,"get_users()")
+        logger.info('Fetching all users')
         users = []
         iteration = 0
         while True:
@@ -493,13 +479,10 @@ class CatoSCIM:
             iteration += 1
             success, response = self.send("GET", f'/Users?startIndex={len(users)}')
             if not success:
-                self.log(1, f'Error retrieving users: {response}')
+                logger.error(f'Error retrieving users: {response}')
                 return False, response
 
-            #
-            # log
-            #
-            self.log(1,f'Iteration:{iteration} Current_count:{len(users)} Received_count:{len(response["Resources"])} totalResults:{response["totalResults"]}')
+            logger.debug(f'Users fetch iteration {iteration}: current={len(users)}, received={len(response["Resources"])}, total={response["totalResults"]}')
 
             #
             # add new users to the list
@@ -534,10 +517,7 @@ class CatoSCIM:
         Returns a tuple consisting of a Boolean success flag, and the response.
         '''
 
-        #
-        # log the function call
-        #
-        self.log(1, f'remove_members({groupid})')        
+        logger.info(f'Removing members from group {groupid}')        
 
         #
         # create the data object
@@ -568,10 +548,7 @@ class CatoSCIM:
         Returns a tuple consisting of a Boolean success flag, and the response.
         '''
 
-        #
-        # log the function call
-        #
-        self.log(1, f'rename_group({groupid})')
+        logger.info(f'Renaming group {groupid}')
 
 
         #
@@ -621,10 +598,7 @@ class CatoSCIM:
         Returns a tuple consisting of a Boolean success flag, and the response.
         '''
 
-        #
-        # log the function call
-        #
-        self.log(1, f'update_group({groupid})')
+        logger.info(f'Updating group {groupid}')
 
         #
         # send the request
@@ -672,10 +646,7 @@ class CatoSCIM:
         Returns a tuple consisting of a Boolean success flag, and the response string.
         '''
 
-        #
-        # log the function call
-        #
-        self.log(1, f'update_user({userid})')
+        logger.info(f'Updating user {userid}')
 
         #
         # send the request
